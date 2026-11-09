@@ -24,5 +24,6 @@ ConnectWise RMM guidance:
 * Run as Local System or an administrator so event logs, CBS.log, services, and registry indicators are readable.
 * Capture the script's standard output and collect C:\Temp\WindowsUpdate-Reboot-Diagnostic.txt as the resulting artifact.
 * Keep the job action read-only. The script does not install updates, restart the computer, start/stop services, clear caches, or change policy.
+* Windows Update logging is ETW-based on current Windows versions. The script inventories common ETL locations and uses Get-WindowsUpdateLog when available to create a converted log under C:\Temp; it also reads legacy WindowsUpdate.log if present.
 * Compare the report timestamps with the ConnectWise patch policy/job history. The script can identify local Windows evidence, but only the RMM job history can prove whether a patch was deferred, interrupted, or never dispatched.
 
