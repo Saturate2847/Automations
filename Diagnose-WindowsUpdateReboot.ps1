@@ -93,6 +93,26 @@ Write-Line 'Windows Update failure events:'
 foreach ($e in ($failureEvents | Sort-Object TimeCreated -Descending | Select-Object -First 50)) { Write-Line ("{0} | ID {1} | {2}" -f $e.TimeCreated,$e.Id,($e.Message -replace '\s+',' ')) }
 
 Section '4. Servicing and update log evidence'
+Write-Line 'Modern Windows Update diagnostics are ETW-based; WindowsUpdate.log may not exist until ETL data is converted.'
+$etwRoots = @('C:\ProgramData\USOShared\Logs','C:\Windows\Logs\WindowsUpdate','C:\Windows\Logs\waasmedic')
+foreach ($root in $etwRoots) {
+    if (Test-Path $root) {
+        Write-Line "ETW log root: $root"
+        Get-ChildItem -LiteralPath $root -Filter '*.etl' -File -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 50 | ForEach-Object {
+            Write-Line ("  {0} | {1} KB | LastWrite={2}" -f $_.FullName,[math]::Round($_.Length/1KB,1),$_.LastWriteTime)
+        }
+    }
+}
+if (Get-Command Get-WindowsUpdateLog -ErrorAction SilentlyContinue) {
+    $convertedLog = Join-Path (Split-Path $OutputPath -Parent) 'WindowsUpdate-ETW-converted.log'
+    try {
+        Get-WindowsUpdateLog -LogPath $convertedLog -ErrorAction Stop | Out-Null
+        if (Test-Path $convertedLog) {
+            Write-Line "ETW conversion output: $convertedLog (last 200 lines)"
+            Get-Content $convertedLog -Tail 200 | ForEach-Object { Write-Line $_ }
+        }
+    } catch { Write-Line "ETW conversion unavailable: $($_.Exception.Message)" }
+} else { Write-Line 'Get-WindowsUpdateLog is unavailable on this system; ETL inventory was still collected.' }
 foreach ($file in 'C:\Windows\Logs\CBS\CBS.log','C:\Windows\WindowsUpdate.log') {
     if (Test-Path $file) {
         Write-Line "File: $file (last 80 lines)"
